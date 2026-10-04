@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">YV Smart Remote</string>
+    <string name="tv_connected">Connected</string>
+    <string name="tv_disconnected">Disconnected</string>
+    <string name="tv_searching">Searching for TVs…</string>
+    <string name="tab_remote">Remote</string>
+    <string name="tab_touchpad">Touchpad</string>
+    <string name="tab_numpad">Numpad</string>
+    <string name="tab_apps">Apps</string>
+    <string name="tab_keyboard">Keyboard</string>
+    <string name="power_button">Power</string>
+    <string name="voice_search">Voice Search</string>
+</resources>
