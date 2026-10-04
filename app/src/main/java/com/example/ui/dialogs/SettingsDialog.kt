@@ -212,7 +212,7 @@ fun SettingsDialog(
         ) {
           Column {
             Text(
-              text = "YV Smart Remote",
+              text = "YV Smart TV Remote",
               color = Color.White,
               fontWeight = FontWeight.Bold,
               fontSize = 12.sp

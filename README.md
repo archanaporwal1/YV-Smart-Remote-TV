@@ -1,4 +1,4 @@
-# YV Smart Remote - Universal Remote for Android TV & Google TV
+# YV Smart TV Remote - Universal Remote for Android TV & Google TV
 
 An authentic, tactile Android TV and Google TV remote control application built with modern Jetpack Compose and Material Design 3.
 
@@ -8,13 +8,13 @@ An authentic, tactile Android TV and Google TV remote control application built 
 
 You can download the ready-to-install Android APK file directly from this repository:
 
-👉 **[Download YV-Smart-Remote.apk](apk/YV-Smart-Remote.apk?raw=true)** *(Direct APK file)*
+👉 **[Download YV-Smart-TV-Remote.apk](apk/YV-Smart-TV-Remote.apk?raw=true)** *(Direct APK file)*
 
 ### How to Install on Android:
 1. Tap the download link above (or navigate to the `apk/` directory in this repo and click **Download**).
-2. Open the downloaded `YV-Smart-Remote.apk` file on your Android phone.
+2. Open the downloaded `YV-Smart-TV-Remote.apk` file on your Android phone.
 3. If prompted, allow **"Install unknown apps"** from your browser/file manager.
-4. Launch **YV Smart Remote** and connect to your smart TV on the same Wi-Fi network!
+4. Launch **YV Smart TV Remote** and connect to your smart TV on the same Wi-Fi network!
 
 ---
 

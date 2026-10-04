@@ -144,11 +144,13 @@ fun MainRemoteScreen(
   }
 
   // Show Pairing Dialog if needed
+  val pairingStatusMsg by viewModel.pairingStatusMessage.collectAsState()
   if (uiState.connectionStatus == ConnectionStatus.PAIRING && uiState.pairingTargetTv != null) {
     PairingPinDialog(
       targetTv = uiState.pairingTargetTv,
-      pairingCode = uiState.pairingCode,
-      onConfirmPin = { pin -> viewModel.confirmPairing(pin) },
+      statusMessage = pairingStatusMsg,
+      onConfirmPin = { pin, onResult -> viewModel.confirmPairing(pin, onResult) },
+      onDirectConnect = { target -> viewModel.forceDirectConnect(target) },
       onCancel = { viewModel.cancelPairing() }
     )
   }
@@ -265,7 +267,7 @@ fun MainRemoteScreen(
             Spacer(modifier = Modifier.width(8.dp))
             Column {
               Text(
-                text = "YV Smart Remote",
+                text = "YV Smart TV Remote",
                 style = MaterialTheme.typography.titleMedium.copy(
                   fontWeight = FontWeight.Bold,
                   fontSize = 16.sp,

@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "YV Smart Remote"
+rootProject.name = "YV Smart TV Remote"
 
 include(":app")

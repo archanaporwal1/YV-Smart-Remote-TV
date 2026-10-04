@@ -1,5 +1,5 @@
 {
-  "name": "YV Smart Remote",
+  "name": "YV Smart TV Remote",
   "description": "Smart universal TV remote for Android TV and Google TV with touchpad, voice commands, D-pad, keyboard, and app shortcuts.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

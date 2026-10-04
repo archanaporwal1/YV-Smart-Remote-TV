@@ -147,52 +147,6 @@ class NetworkTvScanner(private val context: Context) {
 
       deferreds.awaitAll()
 
-      // 3. Ensure known/verified local network smart TVs are included if in sandboxed container/emulator
-      if (discoveredList.isEmpty()) {
-        val fallbackHosts = listOf(
-          DiscoveredTvHost(
-            ipAddress = "${subnet.baseIp}.102",
-            port = 6466,
-            hostName = "living-room-tv.local",
-            brandHint = "Google TV (Chromecast 4K)",
-            latencyMs = 14,
-            discoveryMethod = "Port 6466 (Google TV Remote v2)"
-          ),
-          DiscoveredTvHost(
-            ipAddress = "${subnet.baseIp}.145",
-            port = 6466,
-            hostName = "sony-bravia-xr.local",
-            brandHint = "Sony BRAVIA 4K Android TV",
-            latencyMs = 22,
-            discoveryMethod = "Port 6466 (Remote v2)"
-          ),
-          DiscoveredTvHost(
-            ipAddress = "${subnet.baseIp}.118",
-            port = 8008,
-            hostName = "tcl-android-tv.lan",
-            brandHint = "TCL 4K Smart Google TV",
-            latencyMs = 18,
-            discoveryMethod = "Port 8008 (Google Cast)"
-          ),
-          DiscoveredTvHost(
-            ipAddress = "${subnet.baseIp}.164",
-            port = 6466,
-            hostName = "skyworth-qled.local",
-            brandHint = "Skyworth Android TV",
-            latencyMs = 31,
-            discoveryMethod = "Port 6466 (Android TV Remote)"
-          )
-        )
-        for (host in fallbackHosts) {
-          if (seenIps.add(host.ipAddress)) {
-            discoveredList.add(host)
-            withContext(Dispatchers.Main) {
-              onDeviceFound(host)
-            }
-          }
-        }
-      }
-
       stopNsdDiscovery()
 
       withContext(Dispatchers.Main) {

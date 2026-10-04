@@ -31,6 +31,7 @@ class AndroidTvController(private val context: Context) {
   }
 
   private var speechRecognizer: SpeechRecognizer? = null
+  private val remoteClient: com.example.service.AndroidTvRemoteClient = com.example.service.AndroidTvRemoteClient(context)
 
   fun triggerHapticFeedback(enabled: Boolean, heavy: Boolean = false) {
     if (!enabled) return
@@ -58,20 +59,10 @@ class AndroidTvController(private val context: Context) {
       return
     }
 
-    // Attempt real socket ping to the device IP and port in the background
     CoroutineScope(Dispatchers.IO).launch {
-      var socketSuccess = false
-      try {
-        Socket().use { socket ->
-          socket.connect(InetSocketAddress(device.ipAddress, device.port), 450)
-          socketSuccess = socket.isConnected
-        }
-      } catch (_: Exception) {
-        // Fallback: network is simulated or TV is in standby
-      }
-
+      val success = remoteClient.sendKey(device, command)
       CoroutineScope(Dispatchers.Main).launch {
-        onResult(true, "Sent: $command")
+        onResult(success, if (success) "Sent: $command" else "Transmitted: $command")
       }
     }
   }

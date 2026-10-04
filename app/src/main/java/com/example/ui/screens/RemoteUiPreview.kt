@@ -127,7 +127,7 @@ fun StatelessRemotePreviewLayout(
           Spacer(modifier = Modifier.width(8.dp))
           Column {
             Text(
-              text = "YV Smart Remote",
+              text = "YV Smart TV Remote",
               style = MaterialTheme.typography.titleMedium.copy(
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp

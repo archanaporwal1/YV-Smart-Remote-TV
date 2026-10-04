@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">YV Smart Remote</string>
+    <string name="app_name">YV Smart TV Remote</string>
     <string name="tv_connected">Connected</string>
     <string name="tv_disconnected">Disconnected</string>
     <string name="tv_searching">Searching for TVs…</string>

@@ -12,7 +12,9 @@ import com.example.model.RemoteMode
 import com.example.model.TvApp
 import com.example.model.TvDevice
 import com.example.model.TvState
+import com.example.service.AndroidTvPairingManager
 import com.example.service.NetworkTvScanner
+import com.example.service.PairingState
 import java.util.Collections
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -22,13 +24,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.random.Random
 
 class TvRemoteViewModel(application: Application) : AndroidViewModel(application) {
 
   private val repository: TvRepository
   val controller: AndroidTvController = AndroidTvController(application)
   val networkScanner: NetworkTvScanner = NetworkTvScanner(application)
+  val pairingManager: AndroidTvPairingManager = AndroidTvPairingManager(application)
 
   private val _uiState = MutableStateFlow(TvState())
   val uiState: StateFlow<TvState> = _uiState.asStateFlow()
@@ -60,8 +62,10 @@ class TvRemoteViewModel(application: Application) : AndroidViewModel(application
   private val _subnetInfo = MutableStateFlow("192.168.1.0/24")
   val subnetInfo: StateFlow<String> = _subnetInfo.asStateFlow()
 
+  private val _pairingStatusMessage = MutableStateFlow("")
+  val pairingStatusMessage: StateFlow<String> = _pairingStatusMessage.asStateFlow()
+
   private var scanJob: Job? = null
-  private var lastGeneratedPin: String = ""
 
   init {
     val database = TvDatabase.getDatabase(application)
@@ -70,60 +74,25 @@ class TvRemoteViewModel(application: Application) : AndroidViewModel(application
     val localSubnet = networkScanner.getLocalSubnet()
     _subnetInfo.value = "${localSubnet.baseIp}.0/24 (Local IP: ${localSubnet.localIp})"
 
-    // Load saved devices and populate default starter TVs if empty
+    // Load saved devices and clean up any dummy placeholders
     viewModelScope.launch {
+      try {
+        repository.removeDeviceById("tv_living_room")
+        repository.removeDeviceById("tv_bedroom_sony")
+        repository.removeDeviceById("tv_den_xiaomi")
+      } catch (_: Exception) {}
+
       repository.savedDevices.collect { list ->
-        _savedDevices.value = list
-        if (list.isEmpty()) {
-          seedDefaultDevices()
-        } else if (_uiState.value.activeTv == null) {
-          // Connect to the favorite or first saved device
-          val defaultTv = list.find { it.isFavorite } ?: list.first()
+        val cleanList = list.filterNot {
+          it.id.startsWith("tv_living_room") || it.id.startsWith("tv_bedroom") || it.id.startsWith("tv_den")
+        }
+        _savedDevices.value = cleanList
+        if (cleanList.isNotEmpty() && _uiState.value.activeTv == null) {
+          val defaultTv = cleanList.find { it.isFavorite } ?: cleanList.first()
           connectToTv(defaultTv)
         }
       }
     }
-  }
-
-  private suspend fun seedDefaultDevices() {
-    val initial = listOf(
-      TvDevice(
-        id = "tv_living_room",
-        name = "Living Room Android TV",
-        ipAddress = "192.168.1.102",
-        port = 6466,
-        macAddress = "B8:27:EB:4A:21:8F",
-        brand = "Google TV (Chromecast)",
-        model = "Chromecast with Google TV 4K",
-        isOnline = true,
-        isFavorite = true
-      ),
-      TvDevice(
-        id = "tv_bedroom_sony",
-        name = "Bedroom Sony BRAVIA",
-        ipAddress = "192.168.1.145",
-        port = 6466,
-        macAddress = "00:1E:58:3B:11:02",
-        brand = "Sony BRAVIA",
-        model = "BRAVIA 4K OLED XR",
-        isOnline = true,
-        isFavorite = false
-      ),
-      TvDevice(
-        id = "tv_den_xiaomi",
-        name = "Den Xiaomi Mi Box",
-        ipAddress = "192.168.1.189",
-        port = 6466,
-        macAddress = "AC:37:43:88:51:DC",
-        brand = "Xiaomi",
-        model = "Mi Box S 4K",
-        isOnline = false,
-        isFavorite = false
-      )
-    )
-    repository.saveDevices(initial)
-    _savedDevices.value = initial
-    connectToTv(initial.first())
   }
 
   fun scanForTvs() {
@@ -137,7 +106,6 @@ class TvRemoteViewModel(application: Application) : AndroidViewModel(application
     _uiState.update { it.copy(connectionStatus = ConnectionStatus.SCANNING) }
 
     val currentIps = mutableSetOf<String>()
-    // Seed with existing saved devices' IPs
     _savedDevices.value.forEach { currentIps.add(it.ipAddress) }
     _discoveredIps.value = currentIps.toList()
 
@@ -178,7 +146,6 @@ class TvRemoteViewModel(application: Application) : AndroidViewModel(application
         _discoveredTvHosts.value = allFound
         _discoveredIps.value = allFound.map { it.ipAddress }.distinct()
 
-        // Sync with discovered devices list
         val updatedDevices = mutableListOf<TvDevice>()
         updatedDevices.addAll(_savedDevices.value)
         for (host in allFound) {
@@ -200,7 +167,7 @@ class TvRemoteViewModel(application: Application) : AndroidViewModel(application
         _uiState.update {
           it.copy(
             connectionStatus = if (it.activeTv != null) ConnectionStatus.CONNECTED else ConnectionStatus.DISCONNECTED,
-            lastAction = "Discovered ${_discoveredIps.value.size} TV IP(s)"
+            lastAction = if (allFound.isEmpty()) "No TV found. Enter your TV IP manually below." else "Found ${allFound.size} TV(s)"
           )
         }
       }
@@ -238,38 +205,107 @@ class TvRemoteViewModel(application: Application) : AndroidViewModel(application
     }
   }
 
+  /**
+   * Triggers real TLS pairing to the TV on Port 6467.
+   * This causes the TV to display the PIN code on the screen!
+   */
   fun requestConnect(device: TvDevice) {
-    // Generate authentic 4-digit pairing PIN code like physical Android TV Pairing
-    lastGeneratedPin = String.format("%04d", Random.nextInt(1000, 9999))
     _uiState.update {
       it.copy(
         pairingTargetTv = device,
-        pairingCode = lastGeneratedPin,
-        connectionStatus = ConnectionStatus.PAIRING
+        pairingCode = null,
+        connectionStatus = ConnectionStatus.PAIRING,
+        lastAction = "Connecting to ${device.name} on port 6467..."
+      )
+    }
+    _pairingStatusMessage.value = "Connecting to ${device.ipAddress}:6467 over TLS..."
+
+    viewModelScope.launch {
+      val started = pairingManager.startPairing(device.ipAddress, device.name) { state ->
+        when (state) {
+          is PairingState.Connecting -> {
+            _pairingStatusMessage.value = state.message
+          }
+          is PairingState.WaitingForPin -> {
+            _pairingStatusMessage.value = "Pairing request sent to TV!\nLook at your TV screen and enter the code below:"
+            _uiState.update {
+              it.copy(
+                pairingTargetTv = device,
+                pairingCode = null,
+                lastAction = "Waiting for TV screen PIN..."
+              )
+            }
+          }
+          is PairingState.Verifying -> {
+            _pairingStatusMessage.value = "Verifying PIN code with TV..."
+          }
+          is PairingState.Success -> {
+            _pairingStatusMessage.value = "Pairing successful! Connected."
+          }
+          is PairingState.Error -> {
+            _pairingStatusMessage.value = state.message
+          }
+          else -> {}
+        }
+      }
+
+      if (!started) {
+        _pairingStatusMessage.value = "Could not initiate pairing with ${device.ipAddress}:6467.\nMake sure TV is turned on & on the same Wi-Fi, or tap 'Skip PIN & Direct Connect'."
+      }
+    }
+  }
+
+  /**
+   * Confirms the PIN entered by the user from their TV screen.
+   */
+  fun confirmPairing(enteredPin: String, onResult: (Boolean, String) -> Unit) {
+    val target = _uiState.value.pairingTargetTv
+    if (target == null) {
+      onResult(false, "No pairing TV selected")
+      return
+    }
+
+    viewModelScope.launch {
+      val verified = pairingManager.sendPin(enteredPin) { state ->
+        if (state is PairingState.Error) {
+          _pairingStatusMessage.value = state.message
+        }
+      }
+
+      if (verified) {
+        repository.saveDevice(target.copy(lastConnectedTime = System.currentTimeMillis()))
+        connectToTv(target)
+        _uiState.update {
+          it.copy(
+            pairingCode = null,
+            pairingTargetTv = null,
+            lastAction = "Paired with ${target.name}"
+          )
+        }
+        onResult(true, "Pairing verified by TV!")
+      } else {
+        onResult(false, _pairingStatusMessage.value.ifBlank { "Incorrect PIN entered. Check TV screen." })
+      }
+    }
+  }
+
+  fun forceDirectConnect(device: TvDevice) {
+    pairingManager.closeExistingConnection()
+    viewModelScope.launch {
+      repository.saveDevice(device.copy(lastConnectedTime = System.currentTimeMillis()))
+      connectToTv(device)
+    }
+    _uiState.update {
+      it.copy(
+        pairingCode = null,
+        pairingTargetTv = null,
+        lastAction = "Direct connected to ${device.name}"
       )
     }
   }
 
-  fun confirmPairing(enteredPin: String): Boolean {
-    val target = _uiState.value.pairingTargetTv ?: return false
-    if (enteredPin.trim() == lastGeneratedPin || enteredPin.trim() == "1234" || enteredPin.trim() == "0000") {
-      viewModelScope.launch {
-        repository.saveDevice(target.copy(lastConnectedTime = System.currentTimeMillis()))
-        connectToTv(target)
-      }
-      _uiState.update {
-        it.copy(
-          pairingCode = null,
-          pairingTargetTv = null,
-          lastAction = "Paired with ${target.name}"
-        )
-      }
-      return true
-    }
-    return false
-  }
-
   fun cancelPairing() {
+    pairingManager.closeExistingConnection()
     _uiState.update {
       it.copy(
         pairingCode = null,
