@@ -236,6 +236,9 @@ class TvRemoteViewModel(application: Application) : AndroidViewModel(application
               )
             }
           }
+          is PairingState.DirectReady -> {
+            _pairingStatusMessage.value = state.message
+          }
           is PairingState.Verifying -> {
             _pairingStatusMessage.value = "Verifying PIN code with TV..."
           }
@@ -249,8 +252,8 @@ class TvRemoteViewModel(application: Application) : AndroidViewModel(application
         }
       }
 
-      if (!started) {
-        _pairingStatusMessage.value = "Could not initiate pairing with ${device.ipAddress}:6467.\nMake sure TV is turned on & on the same Wi-Fi, or tap 'Skip PIN & Direct Connect'."
+      if (!started && _pairingStatusMessage.value.isBlank()) {
+        _pairingStatusMessage.value = "Could not initiate pairing with ${device.ipAddress}.\nTap 'Connect TV Directly' to control your TV without PIN."
       }
     }
   }

@@ -255,26 +255,35 @@ fun PairingPinDialog(
           }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
-        // Direct connect fallback button
+        // Direct connect prominent action button
         if (targetTv != null) {
-          TextButton(
+          Button(
             onClick = { onDirectConnect(targetTv) },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+              .fillMaxWidth()
+              .height(44.dp)
+              .testTag("button_direct_connect"),
+            colors = ButtonDefaults.buttonColors(
+              containerColor = Color(0xFF1E2D44),
+              contentColor = RemoteAccentCyan
+            ),
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, RemoteAccentCyan.copy(alpha = 0.6f))
           ) {
             Icon(
               imageVector = Icons.Default.CastConnected,
               contentDescription = "Direct Connect",
               tint = RemoteAccentCyan,
-              modifier = Modifier.size(16.dp)
+              modifier = Modifier.size(18.dp)
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
-              text = "Skip PIN & Direct Connect",
+              text = "Direct Connect (No PIN Needed)",
               color = RemoteAccentCyan,
-              fontSize = 12.sp,
-              fontWeight = FontWeight.Medium
+              fontSize = 13.sp,
+              fontWeight = FontWeight.Bold
             )
           }
         }

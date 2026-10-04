@@ -87,6 +87,8 @@ class AndroidTvRemoteClient(private val context: Context) {
     }
   }
 
+  private val pairingManager = AndroidTvPairingManager(context)
+
   private fun getOrCreateControlSocket(ip: String): Socket? {
     if (activeControlSocket != null && activeControlSocket!!.isConnected && currentDeviceIp == ip) {
       return activeControlSocket
@@ -94,13 +96,7 @@ class AndroidTvRemoteClient(private val context: Context) {
 
     return try {
       closeSocket()
-      val sslContext = SSLContext.getInstance("TLS")
-      val trustAll = arrayOf<TrustManager>(object : X509TrustManager {
-        override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
-        override fun checkClientTrusted(chain: Array<X509Certificate>?, authType: String?) {}
-        override fun checkServerTrusted(chain: Array<X509Certificate>?, authType: String?) {}
-      })
-      sslContext.init(null, trustAll, SecureRandom())
+      val sslContext = pairingManager.createMutualSslContext()
 
       val rawSocket = Socket()
       rawSocket.connect(InetSocketAddress(ip, PORT_CONTROL), 1500)
